@@ -85,6 +85,7 @@ int main(int argc, char **argv) {
     "  -step <n>    - Set constant step (optional)\n"
     "  -steps <n>   - Set count of steps (optional, mute -step)\n"
     "  -silent      - No log information\n"
+    "  -less        - Less log information\n"
     "  -threads <n> - Force set count of threads.";
   const char number_expected[] = "A number is expected.";
   if (argc < 3) {
@@ -101,6 +102,7 @@ int main(int argc, char **argv) {
   string out_filename = "result.html";
   bool use_log = false;
   bool silent = false;
+  bool less = false;
   bool build_graph = false;
 
   // parce params
@@ -187,6 +189,12 @@ int main(int argc, char **argv) {
       continue;
     }
 
+    // сокращенный вывод
+    if (!strcmp(argv[i], "-less")) {
+      less = true;
+      continue;
+    }
+
     // Строить графики
     if (!strcmp(argv[i], "-graph")) {
       build_graph = true;
@@ -204,7 +212,8 @@ int main(int argc, char **argv) {
     return 0;
   }
 
-  std::wcout << L"Processor: " << info.name << endl << endl;
+  if (!silent && !less)
+    std::wcout << L"Processor: " << info.name << endl << endl;
 
   if (thread_count == 0)
     thread_count = info.threads;
@@ -212,11 +221,13 @@ int main(int argc, char **argv) {
   if (steps > 1) {
     if (use_log) {
       step_exp = exp(log((double)count) / steps);
-      std::cout << "Exponent step set to: " << step_exp << std::endl;
+      if (!silent && !less)
+        std::cout << "Exponent step set to: " << step_exp << std::endl;
     }
     else {
       step = count / steps;
-      std::cout << "Step set to: " << step << std::endl;
+      if (!silent && !less)
+        std::cout << "Step set to: " << step << std::endl;
     }
   }
   else if (steps == 1) {
@@ -243,7 +254,7 @@ int main(int argc, char **argv) {
         std::cout << " with avearaging" << std::endl;
       for (uint32_t j = 0; j < average; j++) {
         run_test(count, thread_count, t1, t2);
-        if (!silent)
+        if (!silent && !less)
           std::cout << "    Time multi: " << t1 * 1000.0 << " ms., single: " << t2 * 1000.0 << " ms." << endl;
         multi_t += t1 * norm;
         single_t += t2 * norm;
@@ -281,7 +292,8 @@ int main(int argc, char **argv) {
         std::cout << "\rProgress: " << i * 100 / n << "%";
       }
       else
-        std::cout << std::endl << "Test # " << i + 1 << " (size: " << size << ")" << std::endl;
+        if (!less)
+          std::cout << std::endl << "Test # " << i + 1 << " (size: " << size << ")" << std::endl;
       // run tests
       if (average <= 1) {
         run_test(size, thread_count, multi_t[i], single_t[i]);
@@ -297,7 +309,7 @@ int main(int argc, char **argv) {
         double norm = 1.0 / average;
         for (uint32_t j = 0; j < average; j++) {
           run_test(size, thread_count, t1, t2);
-          if (!silent)
+          if (!silent && !less)
             std::cout << "    Time multi: " << t1 * 1000.0 << " ms., single: " << t2 * 1000.0 << " ms." << endl;
           multi_t[i] += t1 * norm;
           single_t[i] += t2 * norm;

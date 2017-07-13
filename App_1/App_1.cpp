@@ -22,12 +22,13 @@ int main(int argc, char **argv) {
   const char show_help[] = "Usage:\n"
     "  -h, -help    - Show help\n"
     "  -average <n> - How many tests need to make average value (optional)\n"
-    "  -count <n>   - Set max size of processed array.\n"
+    "  -count <n>   - Set max size of array.\n"
     "  -graph       - Construct a graph"
     "  -ln          - Use a logarithmic scale (if use steps)\n"
     "  -step <n>    - Set constant step (optional)\n"
     "  -steps <n>   - Set count of steps (optional, mute -step)\n"
     "  -silent      - No log information\n"
+    "  -less        - Less log information\n"
     "  -threads <n> - Force set count of threads.";
   const char number_expected[] = "A number is expected.";
   if (argc < 3) {
@@ -44,6 +45,7 @@ int main(int argc, char **argv) {
   string out_filename = "result.html";
   bool use_log = false;
   bool silent = false;
+  bool less = false;
   bool build_graph = false;
 
   // parce params
@@ -130,6 +132,12 @@ int main(int argc, char **argv) {
       continue;
     }
 
+    // сокращенный вывод
+    if (!strcmp(argv[i], "-less")) {
+      less = true;
+      continue;
+    }
+
     // Строить графики
     if (!strcmp(argv[i], "-graph")) {
       build_graph = true;
@@ -137,17 +145,18 @@ int main(int argc, char **argv) {
     }
   }
 
-  if (errno == EINVAL){
+  if (errno == EINVAL) {
     std::cout << number_expected;
     return 0;
   }
 
   if (count == 0) {
-    std::cout << "You need to set max size of test using -count <n>";
+    std::cout << "You need to set max order of matrix using -count <n>";
     return 0;
   }
 
-  std::wcout << L"Processor: " << info.name << endl << endl;
+  if (!silent && !less)
+    std::wcout << L"Processor: " << info.name << endl << endl;
 
   if (thread_count == 0)
     thread_count = info.threads;
@@ -155,19 +164,22 @@ int main(int argc, char **argv) {
   if (steps > 1) {
     if (use_log) {
       step_exp = exp(log((double)count) / steps);
-      std::cout << "Exponent step set to: " << step_exp << std::endl;
+      if (!silent && !less)
+        std::cout << "Exponent step set to: " << step_exp << std::endl;
     }
     else {
       step = count / steps;
-      std::cout << "Step set to: " << step << std::endl;
+      if (!silent && !less)
+        std::cout << "Step set to: " << step << std::endl;
     }
-  }else if (steps == 1) {
+  }
+  else if (steps == 1) {
     step = 0;
   }
 
   if (steps == 0 && (step <= 0 || step >= count)) {
     double multi_t = 0.0, single_t = 0.0;
-    
+
     std::cout << "Single test";
     if (average <= 1) {
       if (!silent)
@@ -185,7 +197,7 @@ int main(int argc, char **argv) {
         std::cout << " with avearaging" << std::endl;
       for (uint32_t j = 0; j < average; j++) {
         run_test(count, thread_count, t1, t2);
-        if (!silent)
+        if (!silent && !less)
           std::cout << "    Time multi: " << t1 * 1000.0 << " ms., single: " << t2 * 1000.0 << " ms." << endl;
         multi_t += t1 * norm;
         single_t += t2 * norm;
@@ -219,10 +231,12 @@ int main(int argc, char **argv) {
       count[i] = size;
       multi_t[i] = 0.0;
       single_t[i] = 0.0;
-      if (silent){
+      if (silent) {
         std::cout << "\rProgress: " << i * 100 / n << "%";
-      }else
-        std::cout << std::endl << "Test # " << i + 1 << " (size: " << size << ")" << std::endl;
+      }
+      else
+        if (!less)
+          std::cout << std::endl << "Test # " << i + 1 << " (size: " << size << ")" << std::endl;
       // run tests
       if (average <= 1) {
         run_test(size, thread_count, multi_t[i], single_t[i]);
@@ -238,7 +252,7 @@ int main(int argc, char **argv) {
         double norm = 1.0 / average;
         for (uint32_t j = 0; j < average; j++) {
           run_test(size, thread_count, t1, t2);
-          if (!silent)
+          if (!silent && !less)
             std::cout << "    Time multi: " << t1 * 1000.0 << " ms., single: " << t2 * 1000.0 << " ms." << endl;
           multi_t[i] += t1 * norm;
           single_t[i] += t2 * norm;
@@ -325,7 +339,7 @@ void run_test(size_t size, int32_t thread_count, double &time_multithread, doubl
 
   sub_results.data[0] = 1;
   for (int32_t *item = a.data; item != a.data + size; item++)
-    sub_results.data[1] = (uint64_t)*item * sub_results.data[1] % mod;
+    sub_results.data[0] = (uint64_t)*item * sub_results.data[0] % mod;
   
   ct1 = chrono::steady_clock::now().time_since_epoch() - ct1;
   time_singlethread = ct1.count() * 1.e-9;
